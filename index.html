@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Independent Voice Coach</title>
+    <title>100% Offline English Coach</title>
     <style>
         :root { --primary: #059669; --bg: #f0fdf4; --card: #ffffff; --text: #1f2937; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
@@ -14,7 +14,7 @@
         .msg { padding: 10px 14px; border-radius: 12px; max-width: 85%; font-size: 0.95rem; line-height: 1.4; }
         .hindi { background: #fee2e2; color: #991b1b; align-self: flex-start; }
         .english { background: var(--primary); color: #fff; align-self: flex-end; font-weight: bold; }
-        .system { background: #e5e7eb; color: #374151; align-self: center; font-size: 0.85rem; text-align: center; width: 90%; }
+        .system { background: #e5e7eb; color: #374151; align-self: center; font-size: 0.85rem; text-align: center; width: 90%; border-radius: 8px; padding: 5px; }
         .controls { display: flex; justify-content: center; }
         .mic-btn { background: var(--primary); border: none; width: 75px; height: 75px; border-radius: 50%; color: white; font-size: 2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(5, 150, 105, 0.4); }
         .mic-btn.listening { background: #ef4444; animation: pulse 1.5s infinite; }
@@ -24,7 +24,7 @@
 <body>
 
 <div class="container">
-    <h1>🇮🇳 ➡️ 🇬🇧 Hybrid Voice Coach</h1>
+    <h1>✈️ Fully Offline English Coach</h1>
     <div class="status" id="statusText">Tap the mic and speak Hindi...</div>
     
     <div class="chat-box" id="chatBox"></div>
@@ -39,6 +39,28 @@
     const micBtn = document.getElementById('micBtn');
     const statusText = document.getElementById('statusText');
 
+    // EMBEDDED OFFLINE DICTIONARY DATABASE 
+    // You can infinitely expand this dictionary right from your smartphone editor!
+    const offlineDictionary = {
+        "नमस्ते": "Hello / Greetings",
+        "आपका नाम क्या है": "What is your name?",
+        "आप कैसे हैं": "How are you?",
+        "मैं ठीक हूँ": "I am fine / I am good",
+        "धन्यवाद": "Thank you",
+        "शुभरात्रि": "Good night",
+        "मुझे भूख लगी है": "I am hungry",
+        "पानी चाहिए": "I want water",
+        "यह कितने का है": "How much does this cost?",
+        "शौचालय कहाँ है": "Where is the restroom / toilet?",
+        "मुझे अंग्रेजी सीखनी है": "I want to learn English",
+        "अलविदा": "Goodbye / Bye",
+        "हाँ": "Yes",
+        "नहीं": "No",
+        "बधाई हो": "Congratulations",
+        "क्षमा करें": "Excuse me / Sorry",
+        "मुझे मदद चाहिए": "I need help"
+    };
+
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     let recognition;
     let isListening = false;
@@ -49,59 +71,62 @@
         recognition.lang = 'hi-IN'; 
         recognition.interimResults = false;
 
-        recognition.onstart = () => { statusText.innerText = "🛑 Listening..."; };
+        recognition.onstart = () => { statusText.innerText = "🛑 Listening... Speak Hindi now!"; };
         
         recognition.onresult = (event) => {
-            const hindiText = event.results.transcript;
+            const hindiText = event.results.transcript.trim();
+            // Clean up any punctuation symbols added by phone speech engines
+            const cleanHindi = hindiText.replace(/[.,\/#!\$%\^&\*;:{}=\-_`~()?।]/g,"");
+            
             addMessage("🇮🇳 Hindi: " + hindiText, 'hindi');
-            translateAndSpeak(hindiText);
+            translateOffline(cleanHindi);
         };
 
         recognition.onend = () => { isListening = false; micBtn.classList.remove('listening'); };
     }
 
-    async function translateAndSpeak(text) {
-        try {
-            statusText.innerText = "⏳ Fetching translation...";
-            const response = await fetch(`https://translated.net{encodeURIComponent(text)}&langpair=hi|en`);
-            const data = await response.json();
-            const englishTranslation = data.responseData.translatedText;
-            
-            addMessage("🇬🇧 English: " + englishTranslation, 'english');
-            statusText.innerText = "🔊 Speaking via client-side engine...";
-            
-            speakEnglishLocally(englishTranslation);
-        } catch (error) {
-            addMessage("⚠️ Error loading translation.", 'system');
+    // 100% OFFLINE DICTIONARY LOOKUP LOGIC
+    function translateOffline(userInput) {
+        statusText.innerText = "🔍 Checking internal database...";
+        let foundTranslation = null;
+
+        // Strict Check
+        if (offlineDictionary[userInput]) {
+            foundTranslation = offlineDictionary[userInput];
+        } else {
+            // Smart Fuzzy Fallback: Loops through items to check if any keyword matches
+            for (let phrase in offlineDictionary) {
+                if (userInput.includes(phrase) || phrase.includes(userInput)) {
+                    foundTranslation = offlineDictionary[phrase];
+                    break;
+                }
+            }
+        }
+
+        if (foundTranslation) {
+            addMessage("🇬🇧 English: " + foundTranslation, 'english');
+            statusText.innerText = "🔊 Speaking English translation...";
+            speakEnglishLocally(foundTranslation);
+        } else {
+            // Dynamic help fallback UI
+            addMessage("⚠️ '" + userInput + "' not found offline. Try saying phrases like: 'नमस्ते', 'आप कैसे हैं', or 'यह कितने का है'.", 'system');
+            statusText.innerText = "Phrase matching missing. Try again.";
         }
     }
 
-    // SERVERLESS VOICE ALGORITHM
-    // This injects mathematical adjustments into the local processor to bypass robotic drone accents
     function speakEnglishLocally(text) {
         if ('speechSynthesis' in window) {
             window.speechSynthesis.cancel(); 
             const utterance = new SpeechSynthesisUtterance(text);
-            
-            // Hardcoding micro-modulations to simulate human breath spacing
             utterance.lang = 'en-US';
-            utterance.rate = 0.92;  // Slowed down slightly for realistic clear clarity
-            utterance.pitch = 1.05; // Tuned pitch resonance to filter out mechanical buzzing
+            utterance.rate = 0.92;  
+            utterance.pitch = 1.05; 
 
-            // Directly extracting the highest rendering vocal configuration embedded in device hardware
             const voices = window.speechSynthesis.getVoices();
-            let nativeHumanVoice = voices.find(v => v.lang.includes('en-US') && !v.localService === false) || 
-                                   voices.find(v => v.name.includes('Google')) ||
-                                   voices.find(v => v.lang.includes('en'));
+            let nativeVoice = voices.find(v => v.lang.includes('en-US')) || voices[0];
+            if (nativeVoice) utterance.voice = nativeVoice;
 
-            if (nativeHumanVoice) {
-                utterance.voice = nativeHumanVoice;
-            }
-
-            utterance.onend = () => {
-                statusText.innerText = "✅ Done! Tap mic to speak again.";
-            };
-
+            utterance.onend = () => { statusText.innerText = "✅ Done! Tap mic to speak again."; };
             window.speechSynthesis.speak(utterance);
         }
     }
@@ -124,7 +149,6 @@
         }
     }
 
-    // Forces browser memory allocation cache to register local audio profiles instantly
     if ('speechSynthesis' in window) {
         window.speechSynthesis.getVoices();
         window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.getVoices(); };
