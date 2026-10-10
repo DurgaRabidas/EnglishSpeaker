@@ -3,20 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>100% Offline English Coach</title>
+    <title>Smart Bilingual AI Coach</title>
     <style>
-        :root { --primary: #059669; --bg: #f0fdf4; --card: #ffffff; --text: #1f2937; }
+        :root { --primary: #4f46e5; --bg: #f3f4f6; --card: #ffffff; --text: #1f2937; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
         .container { max-width: 500px; width: 100%; background: var(--card); padding: 20px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); box-sizing: border-box; }
-        h1 { font-size: 1.5rem; text-align: center; color: var(--primary); margin-top: 0; }
-        .status { text-align: center; font-size: 0.9rem; color: #6b7280; margin-bottom: 20px; font-weight: bold; min-height: 20px; }
-        .chat-box { height: 300px; border: 1px solid #e5e7eb; border-radius: 12px; padding: 15px; overflow-y: auto; background: #f9fafb; margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px; }
-        .msg { padding: 10px 14px; border-radius: 12px; max-width: 85%; font-size: 0.95rem; line-height: 1.4; }
-        .hindi { background: #fee2e2; color: #991b1b; align-self: flex-start; }
-        .english { background: var(--primary); color: #fff; align-self: flex-end; font-weight: bold; }
-        .system { background: #e5e7eb; color: #374151; align-self: center; font-size: 0.85rem; text-align: center; width: 90%; border-radius: 8px; padding: 5px; }
+        h1 { font-size: 1.4rem; text-align: center; color: var(--primary); margin-top: 0; margin-bottom: 5px; }
+        .subtitle { text-align: center; font-size: 0.85rem; color: #6b7280; margin-bottom: 15px; }
+        .status { text-align: center; font-size: 0.9rem; color: #4b5563; margin-bottom: 20px; font-weight: bold; min-height: 20px; }
+        .chat-box { height: 320px; border: 1px solid #e5e7eb; border-radius: 12px; padding: 15px; overflow-y: auto; background: #f9fafb; margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px; }
+        .msg { padding: 10px 14px; border-radius: 12px; max-width: 85%; font-size: 0.95rem; line-height: 1.4; box-sizing: border-box; }
+        .input-msg { background: #e0e7ff; color: #1e3a8a; align-self: flex-start; }
+        .reply-msg { background: var(--primary); color: #fff; align-self: flex-end; font-weight: bold; }
         .controls { display: flex; justify-content: center; }
-        .mic-btn { background: var(--primary); border: none; width: 75px; height: 75px; border-radius: 50%; color: white; font-size: 2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(5, 150, 105, 0.4); }
+        .mic-btn { background: var(--primary); border: none; width: 75px; height: 75px; border-radius: 50%; color: white; font-size: 2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.4); }
         .mic-btn.listening { background: #ef4444; animation: pulse 1.5s infinite; }
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
     </style>
@@ -24,8 +24,9 @@
 <body>
 
 <div class="container">
-    <h1>✈️ Fully Offline English Coach</h1>
-    <div class="status" id="statusText">Tap the mic and speak Hindi...</div>
+    <h1>🗣️ Intelligent Bilingual AI</h1>
+    <div class="subtitle">Hindi ➡️ English | English ➡️ Hindi | Mixed ➡️ Pure English</div>
+    <div class="status" id="statusText">Tap mic & talk naturally...</div>
     
     <div class="chat-box" id="chatBox"></div>
 
@@ -39,28 +40,6 @@
     const micBtn = document.getElementById('micBtn');
     const statusText = document.getElementById('statusText');
 
-    // EMBEDDED OFFLINE DICTIONARY DATABASE 
-    // You can infinitely expand this dictionary right from your smartphone editor!
-    const offlineDictionary = {
-        "नमस्ते": "Hello / Greetings",
-        "आपका नाम क्या है": "What is your name?",
-        "आप कैसे हैं": "How are you?",
-        "मैं ठीक हूँ": "I am fine / I am good",
-        "धन्यवाद": "Thank you",
-        "शुभरात्रि": "Good night",
-        "मुझे भूख लगी है": "I am hungry",
-        "पानी चाहिए": "I want water",
-        "यह कितने का है": "How much does this cost?",
-        "शौचालय कहाँ है": "Where is the restroom / toilet?",
-        "मुझे अंग्रेजी सीखनी है": "I want to learn English",
-        "अलविदा": "Goodbye / Bye",
-        "हाँ": "Yes",
-        "नहीं": "No",
-        "बधाई हो": "Congratulations",
-        "क्षमा करें": "Excuse me / Sorry",
-        "मुझे मदद चाहिए": "I need help"
-    };
-
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     let recognition;
     let isListening = false;
@@ -68,65 +47,114 @@
     if (SpeechRecognition) {
         recognition = new SpeechRecognition();
         recognition.continuous = false;
+        // CRITICAL UPDATE: Set microphone to interpret mixed/bilingual inputs natively
         recognition.lang = 'hi-IN'; 
         recognition.interimResults = false;
 
-        recognition.onstart = () => { statusText.innerText = "🛑 Listening... Speak Hindi now!"; };
-        
-        recognition.onresult = (event) => {
-            const hindiText = event.results.transcript.trim();
-            // Clean up any punctuation symbols added by phone speech engines
-            const cleanHindi = hindiText.replace(/[.,\/#!\$%\^&\*;:{}=\-_`~()?।]/g,"");
-            
-            addMessage("🇮🇳 Hindi: " + hindiText, 'hindi');
-            translateOffline(cleanHindi);
+        recognition.onstart = () => {
+            statusText.innerText = "🛑 Listening... Speak Hindi, English, or Mixed!";
+            statusText.style.color = "#ef4444";
         };
 
-        recognition.onend = () => { isListening = false; micBtn.classList.remove('listening'); };
+        recognition.onerror = (e) => {
+            statusText.innerText = "❌ Mic error: " + e.error;
+            statusText.style.color = "#ef4444";
+        };
+
+        recognition.onresult = (event) => {
+            const spokenText = event.results.transcript.trim();
+            addMessage("🗣️ You: " + spokenText, 'input-msg');
+            processBilingualLogic(spokenText);
+        };
+
+        recognition.onend = () => {
+            isListening = false;
+            micBtn.classList.remove('listening');
+        };
+    } else {
+        alert("Please open this page inside Google Chrome or Safari to use voice features.");
     }
 
-    // 100% OFFLINE DICTIONARY LOOKUP LOGIC
-    function translateOffline(userInput) {
-        statusText.innerText = "🔍 Checking internal database...";
-        let foundTranslation = null;
+    // AUTOMATED DYNAMIC TRANSLATION LOGIC ROUTES
+    async function processBilingualLogic(text) {
+        statusText.innerText = "🧠 Analyzing your language pattern...";
+        statusText.style.color = "#2563eb";
 
-        // Strict Check
-        if (offlineDictionary[userInput]) {
-            foundTranslation = offlineDictionary[userInput];
+        // Step 1: Detect if text contains English words alongside Hindi script/sounds
+        const hasEnglishAlphabet = /[a-zA-Z]/.test(text);
+        
+        // Count Hindi specific characters to decide if it's pure English or mixed
+        const hindiCharacterMatch = text.match(/[\u0900-\u097F]/g);
+        const hasHindiCharacters = hindiCharacterMatch && hindiCharacterMatch.length > 0;
+
+        let sourceLang = 'auto';
+        let targetLang = 'en'; // Default fallback path target is English
+
+        if (hasHindiCharacters && !hasEnglishAlphabet) {
+            // Path A: Spoke Pure Hindi -> Translate to English
+            sourceLang = 'hi';
+            targetLang = 'en';
+        } else if (!hasHindiCharacters && hasEnglishAlphabet) {
+            // Path B: Spoke Pure English -> Translate to Hindi
+            sourceLang = 'en';
+            targetLang = 'hi';
         } else {
-            // Smart Fuzzy Fallback: Loops through items to check if any keyword matches
-            for (let phrase in offlineDictionary) {
-                if (userInput.includes(phrase) || phrase.includes(userInput)) {
-                    foundTranslation = offlineDictionary[phrase];
-                    break;
-                }
+            // Path C: Spoke Mixed / Hinglish -> Convert to Pure English
+            sourceLang = 'auto';
+            targetLang = 'en';
+        }
+
+        try {
+            // Tapping into a free, open-source mirror endpoint of Google Translate engine
+            const url = `https://googleapis.com{sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            // Extract the cleaned string from Google's complex matrix output array
+            let translatedResult = "";
+            if(data && data[0]) {
+                data[0].forEach(element => {
+                    if(element[0]) translatedResult += element[0];
+                });
             }
-        }
 
-        if (foundTranslation) {
-            addMessage("🇬🇧 English: " + foundTranslation, 'english');
-            statusText.innerText = "🔊 Speaking English translation...";
-            speakEnglishLocally(foundTranslation);
-        } else {
-            // Dynamic help fallback UI
-            addMessage("⚠️ '" + userInput + "' not found offline. Try saying phrases like: 'नमस्ते', 'आप कैसे हैं', or 'यह कितने का है'.", 'system');
-            statusText.innerText = "Phrase matching missing. Try again.";
+            // Print output message screen
+            const flag = targetLang === 'en' ? '🇬🇧 English: ' : '🇮🇳 Hindi: ';
+            addMessage(flag + translatedResult, 'reply-msg');
+            
+            statusText.innerText = "🔊 Speaking translation...";
+            statusText.style.color = "#059669";
+            
+            speakTextLocally(translatedResult, targetLang);
+        } catch (error) {
+            addMessage("⚠️ System engine lag. Please test again.", 'input-msg');
+            statusText.innerText = "Failed. Tap to try again.";
         }
     }
 
-    function speakEnglishLocally(text) {
+    function speakTextLocally(text, targetLang) {
         if ('speechSynthesis' in window) {
             window.speechSynthesis.cancel(); 
             const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'en-US';
-            utterance.rate = 0.92;  
-            utterance.pitch = 1.05; 
+            
+            // Adapt speaking accent code dynamically
+            if(targetLang === 'hi') {
+                utterance.lang = 'hi-IN';
+                utterance.rate = 1.0;
+            } else {
+                utterance.lang = 'en-US';
+                utterance.rate = 0.92; // Slightly natural clear voice cadence
+                utterance.pitch = 1.05;
+            }
 
             const voices = window.speechSynthesis.getVoices();
-            let nativeVoice = voices.find(v => v.lang.includes('en-US')) || voices[0];
-            if (nativeVoice) utterance.voice = nativeVoice;
+            let voiceProfile = voices.find(v => v.lang.includes(targetLang));
+            if (voiceProfile) utterance.voice = voiceProfile;
 
-            utterance.onend = () => { statusText.innerText = "✅ Done! Tap mic to speak again."; };
+            utterance.onend = () => {
+                statusText.innerText = "✅ Done! Tap mic to speak again.";
+                statusText.style.color = "#059669";
+            };
             window.speechSynthesis.speak(utterance);
         }
     }
@@ -141,8 +169,9 @@
 
     function toggleListening() {
         if (!recognition) return;
-        if (isListening) { recognition.stop(); } 
-        else {
+        if (isListening) {
+            recognition.stop();
+        } else {
             isListening = true;
             micBtn.classList.add('listening');
             try { recognition.start(); } catch(e) { recognition.stop(); }
