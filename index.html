@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Trilingual AI Coach</title>
+    <title>Trilingual AI Coach</title>
     <style>
         :root { --primary: #4f46e5; --bg: #f3f4f6; --card: #ffffff; --text: #1f2937; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
@@ -13,7 +13,7 @@
         .lang-toggle { display: flex; justify-content: center; gap: 10px; margin-bottom: 15px; }
         .toggle-btn { padding: 6px 12px; font-size: 0.85rem; border: 1px solid #d1d5db; border-radius: 20px; background: #fff; cursor: pointer; font-weight: bold; }
         .toggle-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
-        .status { text-align: center; font-size: 0.9rem; color: #4b5563; margin-bottom: 20px; font-weight: bold; min-height: 20px; }
+        .status { text-align: center; font-size: 0.9rem; color: #4b5563; margin-bottom: 20px; font-weight: bold; min-height: 20px; padding: 8px; border-radius: 8px; background: #e5e7eb; }
         .chat-box { height: 320px; border: 1px solid #e5e7eb; border-radius: 12px; padding: 15px; overflow-y: auto; background: #f9fafb; margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px; }
         .msg { padding: 10px 14px; border-radius: 12px; max-width: 85%; font-size: 0.95rem; line-height: 1.4; box-sizing: border-box; }
         .input-msg { background: #e0e7ff; color: #1e3a8a; align-self: flex-start; }
@@ -27,16 +27,15 @@
 <body>
 
 <div class="container">
-    <h1>🗣️ Trilingual AI Speaking Coach</h1>
+    <h1>🗣️ Trilingual Speaking Coach</h1>
     <div class="subtitle">Supports English, Hindi & Bengali</div>
     
-    <!-- Quick option to let the app know your primary regional native language -->
     <div class="lang-toggle">
-        <button class="toggle-btn active" id="btnBn" onclick="setNativeLang('bn-IN')">🇧🇩 বাংলা / Bengali Mode</button>
-        <button class="toggle-btn" id="btnHi" onclick="setNativeLang('hi-IN')">🇮🇳 हिंदी / Hindi Mode</button>
+        <button class="toggle-btn active" id="btnBn" onclick="setNativeLang('bn-IN')">🇧🇩 Bengali Mode</button>
+        <button class="toggle-btn" id="btnHi" onclick="setNativeLang('hi-IN')">🇮🇳 Hindi Mode</button>
     </div>
 
-    <div class="status" id="statusText">Tap mic & start talking...</div>
+    <div class="status" id="statusText">System Ready. Tap Mic.</div>
     <div class="chat-box" id="chatBox"></div>
     <div class="controls">
         <button class="mic-btn" id="micBtn" onclick="toggleListening()">🎙️</button>
@@ -48,78 +47,84 @@
     const micBtn = document.getElementById('micBtn');
     const statusText = document.getElementById('statusText');
     
-    let currentNativeMode = 'bn-IN'; // Default speech engine focus is Bengali
-
+    let currentNativeMode = 'bn-IN';
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     let recognition;
     let isListening = false;
 
     function initRecognition() {
-        if (SpeechRecognition) {
-            recognition = new SpeechRecognition();
-            recognition.continuous = false;
-            recognition.lang = currentNativeMode; 
-            recognition.interimResults = false;
+        if (!SpeechRecognition) {
+            statusText.innerText = "❌ Browser unsupported. Use real Chrome/Safari.";
+            return;
+        }
+        
+        recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.lang = currentNativeMode; 
 
-            recognition.onstart = () => {
-                const langName = currentNativeMode === 'bn-IN' ? 'Bengali' : 'Hindi';
-                statusText.innerText = `🛑 Listening... Speak English, ${langName} or Mixed!`;
-                statusText.style.color = "#ef4444";
-            };
+        recognition.onstart = () => {
+            isListening = true;
+            micBtn.classList.add('listening');
+            statusText.innerText = "🛑 Listening closely... Speak now!";
+            statusText.style.color = "#ef4444";
+        };
 
-            recognition.onerror = (e) => {
-                statusText.innerText = "❌ Mic error: " + e.error;
-                statusText.style.color = "#ef4444";
-            };
+        recognition.onerror = (e) => {
+            console.error(e);
+            statusText.innerText = "❌ Error: " + e.error + ". Check Mic Permissions!";
+            statusText.style.color = "#ef4444";
+            isListening = false;
+            micBtn.classList.remove('listening');
+        };
 
-            recognition.onresult = (event) => {
-                const spokenText = event.results.transcript.trim();
+        recognition.onresult = (event) => {
+            const spokenText = event.results[0][0].transcript.trim();
+            if (spokenText) {
                 addMessage("🗣️ You: " + spokenText, 'input-msg');
                 processTrilingualLogic(spokenText);
-            };
+            } else {
+                statusText.innerText = "⚠️ Capturing failed. Try again.";
+            }
+        };
 
-            recognition.onend = () => {
-                isListening = false;
-                micBtn.classList.remove('listening');
-            };
-        }
+        recognition.onend = () => {
+            isListening = false;
+            micBtn.classList.remove('listening');
+            if (statusText.innerText.includes("Listening")) {
+                statusText.innerText = "Processing audio match...";
+                statusText.style.color = "#2563eb";
+            }
+        };
     }
 
     function setNativeLang(langCode) {
         currentNativeMode = langCode;
         document.getElementById('btnBn').classList.toggle('active', langCode === 'bn-IN');
         document.getElementById('btnHi').classList.toggle('active', langCode === 'hi-IN');
-        statusText.innerText = langCode === 'bn-IN' ? "Switched to Bengali Native Mode" : "Switched to Hindi Native Mode";
+        statusText.innerText = "Switched modes. Tap mic to speak.";
         statusText.style.color = "#4b5563";
-        if(isListening) recognition.stop();
-        initRecognition();
+        if (isListening) recognition.stop();
     }
 
     async function processTrilingualLogic(text) {
-        statusText.innerText = "🧠 Analyzing languages...";
+        statusText.innerText = "🧠 Compiling translation stream...";
         statusText.style.color = "#2563eb";
 
         const hasEnglishAlphabet = /[a-zA-Z]/.test(text);
-        // Bengali Unicode block range check
-        const bengaliCharMatch = text.match(/[\u0980-\u09FF]/g);
-        const hasBengali = bengaliCharMatch && bengaliCharMatch.length > 0;
-        // Hindi Unicode block range check
-        const hindiCharMatch = text.match(/[\u0900-\u097F]/g);
-        const hasHindi = hindiCharMatch && hindiCharMatch.length > 0;
+        const hasBengali = /[\u0980-\u09FF]/.test(text);
+        const hasHindi = /[\u0900-\u097F]/.test(text);
 
         let sourceLang = 'auto';
         let targetLang = 'en'; 
 
         if ((hasBengali || hasHindi) && !hasEnglishAlphabet) {
-            // Path A: Pure Bengali or Pure Hindi spoken -> Output English
             sourceLang = hasBengali ? 'bn' : 'hi';
             targetLang = 'en';
         } else if (!hasBengali && !hasHindi && hasEnglishAlphabet) {
-            // Path B: Pure English spoken -> Output back into user's active native layout choice
             sourceLang = 'en';
             targetLang = currentNativeMode === 'bn-IN' ? 'bn' : 'hi';
         } else {
-            // Path C: Mixed/Hinglish/Benglish spoken -> Smart merge to Pure English
             sourceLang = 'auto';
             targetLang = 'en';
         }
@@ -130,10 +135,15 @@
             const data = await response.json();
             
             let translatedResult = "";
-            if(data && data[0]) {
+            if (data && data[0]) {
                 data[0].forEach(element => {
-                    if(element[0]) translatedResult += element[0];
+                    if (element[0]) translatedResult += element[0];
                 });
+            }
+
+            if (!translatedResult) {
+                statusText.innerText = "⚠️ Engine match timeout.";
+                return;
             }
 
             let flag = '🇬🇧 English: ';
@@ -146,7 +156,7 @@
             
             speakTextLocally(translatedResult, targetLang);
         } catch (error) {
-            addMessage("⚠️ System processing issue. Try again.", 'input-msg');
+            statusText.innerText = "❌ Network processing failure.";
         }
     }
 
@@ -155,26 +165,28 @@
             window.speechSynthesis.cancel(); 
             const utterance = new SpeechSynthesisUtterance(text);
             
-            if(targetLang === 'bn') {
-                utterance.lang = 'bn-IN'; // Tells browser to output Bengali text accent
-            } else if(targetLang === 'hi') {
-                utterance.lang = 'hi-IN';
-            } else {
+            if (targetLang === 'bn') utterance.lang = 'bn-IN';
+            else if (targetLang === 'hi') utterance.lang = 'hi-IN';
+            else {
                 utterance.lang = 'en-US';
                 utterance.rate = 0.92;
                 utterance.pitch = 1.05;
             }
 
-            const voices = window.speechSynthesis.getVoices();
-            let voiceProfile = voices.find(v => v.lang.startsWith(targetLang));
-            if (voiceProfile) utterance.voice = voiceProfile;
-
+            window.speechSynthesis.speak(utterance);
             utterance.onend = () => {
                 statusText.innerText = "✅ Done! Tap mic to speak again.";
                 statusText.style.color = "#059669";
             };
-            window.speechSynthesis.speak(utterance);
         }
+    }
+
+    function addMessage(text, className) {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `msg ${className}`;
+        msgDiv.innerText = text;
+        chatBox.appendChild(msgDiv);
+        chatBox.scrollTop = chatBox.scrollHeight;
     }
 
     function toggleListening() {
@@ -184,9 +196,11 @@
         if (isListening) {
             recognition.stop();
         } else {
-            isListening = true;
-            micBtn.classList.add('listening');
-            try { recognition.start(); } catch(e) { recognition.stop(); }
+            try { 
+                recognition.start(); 
+            } catch(e) { 
+                recognition.stop(); 
+            }
         }
     }
 
