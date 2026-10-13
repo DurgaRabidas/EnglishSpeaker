@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Instant Offline Trilingual Coach</title>
+    <title>Instant Smart Offline Coach</title>
     <style>
         :root { --primary: #4f46e5; --bg: #f3f4f6; --card: #ffffff; --text: #1f2937; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
@@ -11,15 +11,15 @@
         h1 { font-size: 1.4rem; text-align: center; color: var(--primary); margin-top: 0; margin-bottom: 5px; }
         .subtitle { text-align: center; font-size: 0.85rem; color: #6b7280; margin-bottom: 15px; }
         .lang-toggle { display: flex; justify-content: center; gap: 10px; margin-bottom: 15px; }
-        .toggle-btn { padding: 6px 12px; font-size: 0.85rem; border: 1px solid #d1d5db; border-radius: 20px; background: #fff; cursor: pointer; font-weight: bold; }
+        .toggle-btn { padding: 10px 16px; font-size: 0.9rem; border: 2px solid #d1d5db; border-radius: 20px; background: #fff; cursor: pointer; font-weight: bold; -webkit-tap-highlight-color: transparent; }
         .toggle-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
-        .status { text-align: center; font-size: 0.9rem; color: #4b5563; margin-bottom: 20px; font-weight: bold; min-height: 20px; padding: 8px; border-radius: 8px; background: #e5e7eb; }
+        .status { text-align: center; font-size: 0.9rem; color: #4b5563; margin-bottom: 20px; font-weight: bold; min-height: 20px; padding: 12px; border-radius: 8px; background: #e5e7eb; }
         .chat-box { height: 320px; border: 1px solid #e5e7eb; border-radius: 12px; padding: 15px; overflow-y: auto; background: #f9fafb; margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px; }
         .msg { padding: 10px 14px; border-radius: 12px; max-width: 85%; font-size: 0.95rem; line-height: 1.4; box-sizing: border-box; }
         .input-msg { background: #e0e7ff; color: #1e3a8a; align-self: flex-start; }
         .reply-msg { background: var(--primary); color: #fff; align-self: flex-end; font-weight: bold; }
         .controls { display: flex; justify-content: center; }
-        .mic-btn { background: var(--primary); border: none; width: 75px; height: 75px; border-radius: 50%; color: white; font-size: 2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.4); }
+        .mic-btn { background: var(--primary); border: none; width: 80px; height: 80px; border-radius: 50%; color: white; font-size: 2.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.4); -webkit-tap-highlight-color: transparent; }
         .mic-btn.listening { background: #ef4444; animation: pulse 1.5s infinite; }
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
     </style>
@@ -27,82 +27,75 @@
 <body>
 
 <div class="container">
-    <h1>⚡ Offline Dictionary Coach</h1>
-    <div class="subtitle">0-Lag Instant Local Translation</div>
+    <h1>🗣️ Smart Voice Coach</h1>
+    <div class="subtitle">Instant Trilingual Translation App</div>
     
     <div class="lang-toggle">
-        <button class="toggle-btn active" id="btnBn" onclick="setNativeLang('bn-IN')">🇧🇩 Bengali Mode</button>
-        <button class="toggle-btn" id="btnHi" onclick="setNativeLang('hi-IN')">🇮🇳 Hindi Mode</button>
+        <button class="toggle-btn active" id="btnBn">🇧🇩 Bengali Mode</button>
+        <button class="toggle-btn" id="btnHi">🇮🇳 Hindi Mode</button>
     </div>
 
-    <div class="status" id="statusText">Ready. Tap Mic.</div>
+    <div class="status" id="statusText">Loading Voice Engine...</div>
     <div class="chat-box" id="chatBox"></div>
     <div class="controls">
-        <button class="mic-btn" id="micBtn" onclick="toggleListening()">🎙️</button>
+        <button class="mic-btn" id="micBtn">🎙️</button>
     </div>
 </div>
 
 <script>
+    // Safeguard all core DOM elements immediately
     const chatBox = document.getElementById('chatBox');
     const micBtn = document.getElementById('micBtn');
     const statusText = document.getElementById('statusText');
+    const btnBn = document.getElementById('btnBn');
+    const btnHi = document.getElementById('btnHi');
     
     let currentNativeMode = 'bn-IN';
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    let recognition;
     let isListening = false;
+    let recognition = null;
 
-    // MASSIVE LOCAL DICTIONARY (Completely Offline - Incredibly Fast)
-    const masterDictionary = {
-        // --- HINDI TO ENGLISH ---
-        "नमस्ते": "Hello",
-        "आप कैसे हैं": "How are you",
-        "मैं ठीक हूँ": "I am fine",
-        "आपका नाम क्या है": "What is your name",
-        "मेरा नाम है": "My name is",
-        "धन्यवाद": "Thank you",
-        "तुम कहाँ जा रहे हो": "Where are you going",
-        "मुझे भूख लगी है": "I am hungry",
-        "मुझे अंग्रेजी सीखनी है": "I want to learn English",
-        "यह कितने का है": "How much is this",
-        "अलविदा": "Goodbye",
-        "हाँ": "Yes",
-        "नहीं": "No",
-        "शुभ प्रभात": "Good morning",
-        "शुभ रात्रि": "Good night",
-        "क्या आप मेरी मदद कर सकते हैं": "Can you help me",
-        "मुझे समझ नहीं आया": "I did not understand",
+    // LOCAL OFFLINE CONVERSATIONAL DICTIONARY
+    const dictionary = [
+        { keywords: ["নমস্কার", "হ্যালো"], reply: "Hello!", lang: "en" },
+        { keywords: ["কেমন", "আছো", "আছেন"], reply: "How are you?", lang: "en" },
+        { keywords: ["ভালো", "ভাল"], reply: "I am fine.", lang: "en" },
+        { keywords: ["নাম"], reply: "What is your name?", lang: "en" },
+        { keywords: ["ধন্যবাদ"], reply: "Thank you!", lang: "en" },
+        { keywords: ["কোথায়", "যাচ্ছ"], reply: "Where are you going?", lang: "en" },
+        { keywords: ["খিদে", "খাবার"], reply: "I am hungry.", lang: "en" },
+        { keywords: ["ইংরেজি", "শিখতে"], reply: "I want to learn English.", lang: "en" },
+        { keywords: ["দাম", "কত"], reply: "How much is this?", lang: "en" },
+        { keywords: ["সাহায্য"], reply: "Can you help me?", lang: "en" },
+        { keywords: ["বুঝতে"], reply: "I did not understand.", lang: "en" },
 
-        // --- BENGALI TO ENGLISH ---
-        "নমস্কার": "Hello",
-        "তুমি কেমন আছো": "How are you",
-        "আমি ভালো আছি": "I am fine",
-        "তোমার নাম কি": "What is your name",
-        "আমার নাম": "My name is",
-        "ধন্যবাদ": "Thank you",
-        "তুমি কোথায় যাচ্ছো": "Where are you going",
-        "আমার খিদে পেয়েছে": "I am hungry",
-        "আমি ইংরেজি শিখতে চাই": "I want to learn English",
-        "এটার দাম কত": "How much is this",
-        "বিদায়": "Goodbye",
-        "হ্যাঁ": "Yes",
-        "না": "No",
-        "সুপ্রভাত": "Good morning",
-        "শুভ রাত্রি": "Good night",
-        "তুমি কি আমাকে সাহায্য করতে পারবে": "Can you help me",
-        "আমি বুঝতে পারিনি": "I did not understand",
+        { keywords: ["नमस्ते", "हेलो"], reply: "Hello!", lang: "en" },
+        { keywords: ["कैसे", "हाल"], reply: "How are you?", lang: "en" },
+        { keywords: ["ठीक", "बढ़िया"], reply: "I am fine.", lang: "en" },
+        { keywords: ["नाम"], reply: "What is your name?", lang: "en" },
+        { keywords: ["धन्यवाद", "शुक्रिया"], reply: "Thank you!", lang: "en" },
+        { keywords: ["कहाँ", "जा रहे"], reply: "Where are you going?", lang: "en" },
+        { keywords: ["भूख", "खाना"], reply: "I am hungry.", lang: "en" },
+        { keywords: ["अंग्रेजी", "सीखना"], reply: "I want to learn English.", lang: "en" },
+        { keywords: ["कितने", "दाम"], reply: "How much is this?", lang: "en" },
+        { keywords: ["मदद"], reply: "Can you help me?", lang: "en" },
+        { keywords: ["समझ"], reply: "I did not understand.", lang: "en" },
 
-        // --- ENGLISH TO NATIVE REVERSALS ---
-        "hello": { hi: "नमस्ते", bn: "নমস্কার" },
-        "how are you": { hi: "आप कैसे हैं?", bn: "তুমি কেমন আছো?" },
-        "i am fine": { hi: "मैं ठीक हूँ", bn: "আমি ভালো আছি" },
-        "what is your name": { hi: "आपका नाम क्या है?", bn: "তোমার নাম কি?" },
-        "thank you": { hi: "धन्यवाद", bn: "ধন্যবাদ" },
-        "goodbye": { hi: "अलविदा", bn: "বিদায়" }
-    };
+        { keywords: ["hello", "hi"], reply: { hi: "नमस्ते!", bn: "নমস্কার!" } },
+        { keywords: ["how are you"], reply: { hi: "आप कैसे हैं?", bn: "তুমি কেমন আছো?" } },
+        { keywords: ["fine", "good"], reply: { hi: "मैं ठीक हूँ।", bn: "আমি ভালো আছি।" } },
+        { keywords: ["name"], reply: { hi: "आपका नाम क्या है?", bn: "তোমার নাম কি?" } },
+        { keywords: ["thank you", "thanks"], reply: { hi: "धन्यवाद!", bn: "ধন্যবাদ!" } }
+    ];
 
-    function initRecognition() {
-        if (!SpeechRecognition) return;
+    // Setup speech engine safely with device browser fallbacks
+    function setupSpeechEngine() {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            statusText.innerText = "❌ Incompatible Web Browser! Use real Chrome or Safari app.";
+            statusText.style.background = "#fee2e2";
+            return false;
+        }
+        
         recognition = new SpeechRecognition();
         recognition.continuous = false;
         recognition.interimResults = false; 
@@ -111,112 +104,101 @@
         recognition.onstart = () => {
             isListening = true;
             micBtn.classList.add('listening');
-            statusText.innerText = "🛑 Listening...";
+            statusText.innerText = "🛑 Listening... Speak now!";
+            statusText.style.color = "#ef4444";
         };
 
-        recognition.onerror = () => {
+        recognition.onerror = (e) => {
             isListening = false;
             micBtn.classList.remove('listening');
-            statusText.innerText = "⚠️ Mic error. Try again.";
+            statusText.innerText = "❌ Mic blocked or timed out. Tap to retry.";
+            console.error(e);
         };
 
         recognition.onresult = (event) => {
-            const spokenText = event.results.transcript.trim();
-            addMessage("🗣️ You: " + spokenText, 'input-msg');
-            
-            processInstantOfflineLogic(spokenText);
+            if (event.results && event.results[0]) {
+                const spokenText = event.results[0][0].transcript.trim();
+                addMessage("🗣️ You: " + spokenText, 'input-msg');
+                matchKeywords(spokenText);
+            }
         };
 
         recognition.onend = () => {
             isListening = false;
             micBtn.classList.remove('listening');
-        };
-    }
-
-    function setNativeLang(langCode) {
-        currentNativeMode = langCode;
-        document.getElementById('btnBn').classList.toggle('active', langCode === 'bn-IN');
-        document.getElementById('btnHi').classList.toggle('active', langCode === 'hi-IN');
-        statusText.innerText = "Mode changed.";
-        if (isListening) recognition.stop();
-    }
-
-    function processInstantOfflineLogic(text) {
-        statusText.innerText = "⚡ Matching instantly...";
-        
-        const cleanText = text.toLowerCase().replace(/[.,\/#!\$%\^&\*;:{}=\-_`~()?।]/g,"").trim();
-        const isEnglishInput = /[a-zA-Z]/.test(cleanText);
-        
-        let match = null;
-        let targetLang = 'en';
-
-        if (isEnglishInput) {
-            // If user speaks English, look it up and find the Hindi or Bengali match
-            const dictItem = masterDictionary[cleanText];
-            if (dictItem) {
-                targetLang = currentNativeMode === 'bn-IN' ? 'bn' : 'hi';
-                match = dictItem[targetLang];
+            if (!statusText.innerText.includes("Speaking") && !statusText.innerText.includes("⚠️")) {
+                statusText.innerText = "✅ Ready. Tap Mic.";
+                statusText.style.color = "#4b5563";
             }
+        };
+        
+        return true;
+    }
+
+    function changeLanguageMode(langCode) {
+        currentNativeMode = langCode;
+        btnBn.classList.toggle('active', langCode === 'bn-IN');
+        btnHi.classList.toggle('active', langCode === 'hi-IN');
+        statusText.innerText = langCode === 'bn-IN' ? "Mode: Bengali Native" : "Mode: Hindi Native";
+        statusText.style.color = "#4b5563";
+        
+        if (isListening && recognition) {
+            recognition.stop();
+        }
+        setupSpeechEngine();
+    }
+
+    function toggleListening() {
+        // Fallback: If engine didn't build at startup, force build it now
+        if (!recognition) {
+            const operational = setupSpeechEngine();
+            if (!operational) return;
+        }
+
+        if (isListening) {
+            recognition.stop();
         } else {
-            // If user speaks Hindi/Bengali, look it up directly to get the English translation
-            // Try perfect check first
-            if (masterDictionary[cleanText]) {
-                match = masterDictionary[cleanText];
-            } else {
-                // Smart partial check (if you say extra words, it still finds the base phrase)
-                for (let key in masterDictionary) {
-                    if (cleanText.includes(key) || key.includes(cleanText)) {
-                        match = masterDictionary[key];
-                        break;
-                    }
+            try { 
+                recognition.start(); 
+            } catch(e) { 
+                recognition.stop(); 
+                setTimeout(() => { recognition.start(); }, 200);
+            }
+        }
+    }
+
+    function matchKeywords(text) {
+        const lowerText = text.toLowerCase();
+        let finalReply = null;
+        let finalLang = 'en';
+
+        for (let item of dictionary) {
+            let matchFound = item.keywords.some(keyword => lowerText.includes(keyword));
+            if (matchFound) {
+                if (typeof item.reply === 'object') {
+                    finalLang = currentNativeMode === 'bn-IN' ? 'bn' : 'hi';
+                    finalReply = item.reply[finalLang];
+                } else {
+                    finalReply = item.reply;
+                    finalLang = item.lang;
                 }
+                break;
             }
         }
 
-        if (match) {
-            let flag = '🇬🇧 English: ';
-            if (targetLang === 'bn') flag = '🇧🇩 Bengali: ';
-            if (targetLang === 'hi') flag = '🇮🇳 Hindi: ';
-            
-            addMessage(flag + match, 'reply-msg');
+        if (finalReply) {
+            let label = '🇬🇧 English: ';
+            if (finalLang === 'bn') label = '🇧🇩 Bengali: ';
+            if (finalLang === 'hi') label = '🇮🇳 Hindi: ';
+
+            addMessage(label + finalReply, 'reply-msg');
             statusText.innerText = "🔊 Speaking...";
-            speakTextLocally(match, targetLang);
+            statusText.style.color = "#059669";
+            speakTextLocally(finalReply, finalLang);
         } else {
-            addMessage("⚠️ Phrase not found in offline dictionary pack. Try common sentences!", 'input-msg');
-            statusText.innerText = "Tap mic to try again.";
+            addMessage("⚠️ Phrase not matched. Try saying 'নাম', 'नमस्ते', 'hello', or 'কেমন আছো'.", 'input-msg');
+            statusText.innerText = "✅ Ready. Tap Mic.";
         }
     }
 
     function speakTextLocally(text, targetLang) {
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.cancel(); 
-            const utterance = new SpeechSynthesisUtterance(text);
-            
-            if (targetLang === 'bn') utterance.lang = 'bn-IN';
-            else if (targetLang === 'hi') utterance.lang = 'hi-IN';
-            else {
-                utterance.lang = 'en-US';
-                utterance.rate = 1.05; // Quick and snappy response speed
-            }
-
-            window.speechSynthesis.speak(utterance);
-            utterance.onend = () => { statusText.innerText = "✅ Tap mic to speak."; };
-        }
-    }
-
-    function addMessage(text, className) {
-        const msgDiv = document.createElement('div');
-        msgDiv.className = `msg ${className}`;
-        msgDiv.innerText = text;
-        chatBox.appendChild(msgDiv);
-        chatBox.scrollTop = chatBox.scrollHeight;
-    }
-
-    function toggleListening() {
-        if (!recognition) initRecognition();
-        if (isListening) { recognition.stop(); } 
-        else { try { recognition.start(); } catch(e) { recognition.stop(); } }
-    }
-
-    window.onload = () => {
-        initRecognition();
