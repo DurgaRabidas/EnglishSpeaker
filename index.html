@@ -3,202 +3,212 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Instant Smart Offline Coach</title>
+    <title>Voice Coach Debug Edition</title>
     <style>
         :root { --primary: #4f46e5; --bg: #f3f4f6; --card: #ffffff; --text: #1f2937; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        .container { max-width: 500px; width: 100%; background: var(--card); padding: 20px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); box-sizing: border-box; }
-        h1 { font-size: 1.4rem; text-align: center; color: var(--primary); margin-top: 0; margin-bottom: 5px; }
-        .subtitle { text-align: center; font-size: 0.85rem; color: #6b7280; margin-bottom: 15px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; display: flex; flex-direction: column; align-items: center; }
+        .container { max-width: 500px; width: 100%; background: var(--card); padding: 20px; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); box-sizing: border-box; }
+        h1 { font-size: 1.3rem; text-align: center; color: var(--primary); margin: 0 0 5px 0; }
         .lang-toggle { display: flex; justify-content: center; gap: 10px; margin-bottom: 15px; }
-        .toggle-btn { padding: 10px 16px; font-size: 0.9rem; border: 2px solid #d1d5db; border-radius: 20px; background: #fff; cursor: pointer; font-weight: bold; -webkit-tap-highlight-color: transparent; }
+        .toggle-btn { padding: 10px 16px; font-size: 0.9rem; border: 2px solid #d1d5db; border-radius: 20px; background: #fff; cursor: pointer; font-weight: bold; }
         .toggle-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
-        .status { text-align: center; font-size: 0.9rem; color: #4b5563; margin-bottom: 20px; font-weight: bold; min-height: 20px; padding: 12px; border-radius: 8px; background: #e5e7eb; }
-        .chat-box { height: 320px; border: 1px solid #e5e7eb; border-radius: 12px; padding: 15px; overflow-y: auto; background: #f9fafb; margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px; }
-        .msg { padding: 10px 14px; border-radius: 12px; max-width: 85%; font-size: 0.95rem; line-height: 1.4; box-sizing: border-box; }
+        .status { text-align: center; font-size: 0.9rem; color: #4b5563; margin-bottom: 20px; font-weight: bold; padding: 12px; border-radius: 8px; background: #e5e7eb; }
+        .chat-box { height: 260px; border: 1px solid #e5e7eb; border-radius: 12px; padding: 15px; overflow-y: auto; background: #f9fafb; margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px; }
+        .msg { padding: 10px 14px; border-radius: 12px; max-width: 85%; font-size: 0.95rem; }
         .input-msg { background: #e0e7ff; color: #1e3a8a; align-self: flex-start; }
         .reply-msg { background: var(--primary); color: #fff; align-self: flex-end; font-weight: bold; }
         .controls { display: flex; justify-content: center; }
-        .mic-btn { background: var(--primary); border: none; width: 80px; height: 80px; border-radius: 50%; color: white; font-size: 2.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.4); -webkit-tap-highlight-color: transparent; }
-        .mic-btn.listening { background: #ef4444; animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+        .mic-btn { background: var(--primary); border: none; width: 75px; height: 75px; border-radius: 50%; color: white; font-size: 2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .mic-btn.listening { background: #ef4444; }
+        /* Visible Error Box for Phones */
+        .debug-panel { width: 100%; max-width: 500px; background: #1e293b; color: #38bdf8; font-family: monospace; font-size: 0.8rem; padding: 10px; border-radius: 8px; margin-top: 15px; box-sizing: border-box; max-height: 120px; overflow-y: auto; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>🗣️ Smart Voice Coach</h1>
-    <div class="subtitle">Instant Trilingual Translation App</div>
+    <h1>🗣️ Voice Coach (Debug Mode)</h1>
     
     <div class="lang-toggle">
-        <button class="toggle-btn active" id="btnBn">🇧🇩 Bengali Mode</button>
-        <button class="toggle-btn" id="btnHi">🇮🇳 Hindi Mode</button>
+        <button class="toggle-btn active" id="btnBn" onclick="changeMode('bn-IN')">🇧🇩 Bengali</button>
+        <button class="toggle-btn" id="btnHi" onclick="changeMode('hi-IN')">🇮🇳 Hindi</button>
     </div>
 
-    <div class="status" id="statusText">Loading Voice Engine...</div>
+    <div class="status" id="statusText">Initializing System...</div>
     <div class="chat-box" id="chatBox"></div>
     <div class="controls">
-        <button class="mic-btn" id="micBtn">🎙️</button>
+        <button class="mic-btn" id="micBtn" onclick="handleMicClick()">🎙️</button>
     </div>
 </div>
 
+<!-- Hidden logs are printed here live on your phone screen -->
+<div class="debug-panel" id="debugLog">⚙️ System Log: App started.</div>
+
 <script>
-    // Safeguard all core DOM elements immediately
+    // Live On-Screen Debugger Setup
+    const logBox = document.getElementById('debugLog');
+    function debugLog(msg, isError = false) {
+        const timestamp = new Date().toLocaleTimeString();
+        logBox.innerHTML += `<br><span style="color:${isError ? '#f87171' : '#38bdf8'}">[${timestamp}] ${msg}</span>`;
+        logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    // Catch any silent crash and show it in red text
+    window.onerror = function(message, source, lineno, colno, error) {
+        debugLog(`CRASH: ${message} (Line ${lineno})`, true);
+        return false;
+    };
+
     const chatBox = document.getElementById('chatBox');
     const micBtn = document.getElementById('micBtn');
     const statusText = document.getElementById('statusText');
-    const btnBn = document.getElementById('btnBn');
-    const btnHi = document.getElementById('btnHi');
     
     let currentNativeMode = 'bn-IN';
     let isListening = false;
     let recognition = null;
 
-    // LOCAL OFFLINE CONVERSATIONAL DICTIONARY
     const dictionary = [
         { keywords: ["নমস্কার", "হ্যালো"], reply: "Hello!", lang: "en" },
         { keywords: ["কেমন", "আছো", "আছেন"], reply: "How are you?", lang: "en" },
         { keywords: ["ভালো", "ভাল"], reply: "I am fine.", lang: "en" },
         { keywords: ["নাম"], reply: "What is your name?", lang: "en" },
         { keywords: ["ধন্যবাদ"], reply: "Thank you!", lang: "en" },
-        { keywords: ["কোথায়", "যাচ্ছ"], reply: "Where are you going?", lang: "en" },
-        { keywords: ["খিদে", "খাবার"], reply: "I am hungry.", lang: "en" },
-        { keywords: ["ইংরেজি", "শিখতে"], reply: "I want to learn English.", lang: "en" },
-        { keywords: ["দাম", "কত"], reply: "How much is this?", lang: "en" },
-        { keywords: ["সাহায্য"], reply: "Can you help me?", lang: "en" },
-        { keywords: ["বুঝতে"], reply: "I did not understand.", lang: "en" },
-
         { keywords: ["नमस्ते", "हेलो"], reply: "Hello!", lang: "en" },
         { keywords: ["कैसे", "हाल"], reply: "How are you?", lang: "en" },
-        { keywords: ["ठीक", "बढ़िया"], reply: "I am fine.", lang: "en" },
-        { keywords: ["नाम"], reply: "What is your name?", lang: "en" },
-        { keywords: ["धन्यवाद", "शुक्रिया"], reply: "Thank you!", lang: "en" },
-        { keywords: ["कहाँ", "जा रहे"], reply: "Where are you going?", lang: "en" },
-        { keywords: ["भूख", "खाना"], reply: "I am hungry.", lang: "en" },
-        { keywords: ["अंग्रेजी", "सीखना"], reply: "I want to learn English.", lang: "en" },
-        { keywords: ["कितने", "दाम"], reply: "How much is this?", lang: "en" },
-        { keywords: ["मदद"], reply: "Can you help me?", lang: "en" },
-        { keywords: ["समझ"], reply: "I did not understand.", lang: "en" },
-
+        { keywords: ["ঠিক", "बढ़िया"], reply: "I am fine.", lang: "en" },
         { keywords: ["hello", "hi"], reply: { hi: "नमस्ते!", bn: "নমস্কার!" } },
-        { keywords: ["how are you"], reply: { hi: "आप कैसे हैं?", bn: "তুমি কেমন আছো?" } },
-        { keywords: ["fine", "good"], reply: { hi: "मैं ठीक हूँ।", bn: "আমি ভালো আছি।" } },
-        { keywords: ["name"], reply: { hi: "आपका नाम क्या है?", bn: "তোমার নাম কি?" } },
-        { keywords: ["thank you", "thanks"], reply: { hi: "धन्यवाद!", bn: "ধন্যবাদ!" } }
+        { keywords: ["how are you"], reply: { hi: "आप कैसे हैं?", bn: "তুমি কেমন আছো?" } }
     ];
 
-    // Setup speech engine safely with device browser fallbacks
-    function setupSpeechEngine() {
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!SpeechRecognition) {
-            statusText.innerText = "❌ Incompatible Web Browser! Use real Chrome or Safari app.";
-            statusText.style.background = "#fee2e2";
-            return false;
-        }
-        
-        recognition = new SpeechRecognition();
-        recognition.continuous = false;
-        recognition.interimResults = false; 
-        recognition.lang = currentNativeMode; 
-
-        recognition.onstart = () => {
-            isListening = true;
-            micBtn.classList.add('listening');
-            statusText.innerText = "🛑 Listening... Speak now!";
-            statusText.style.color = "#ef4444";
-        };
-
-        recognition.onerror = (e) => {
-            isListening = false;
-            micBtn.classList.remove('listening');
-            statusText.innerText = "❌ Mic blocked or timed out. Tap to retry.";
-            console.error(e);
-        };
-
-        recognition.onresult = (event) => {
-            if (event.results && event.results[0]) {
-                const spokenText = event.results[0][0].transcript.trim();
-                addMessage("🗣️ You: " + spokenText, 'input-msg');
-                matchKeywords(spokenText);
+    function startEngine() {
+        try {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                statusText.innerText = "❌ Browser Blocks Speech Engine";
+                debugLog("ERROR: Browser does not support speech recognition.", true);
+                return;
             }
-        };
+            
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = currentNativeMode;
 
-        recognition.onend = () => {
-            isListening = false;
-            micBtn.classList.remove('listening');
-            if (!statusText.innerText.includes("Speaking") && !statusText.innerText.includes("⚠️")) {
+            recognition.onstart = () => {
+                isListening = true;
+                micBtn.classList.add('listening');
+                statusText.innerText = "🛑 Listening...";
+                debugLog(`Mic open. Language set to: ${recognition.lang}`);
+            };
+
+            recognition.onerror = (e) => {
+                isListening = false;
+                micBtn.classList.remove('listening');
+                statusText.innerText = "❌ Mic Error";
+                debugLog(`Speech Engine Error: ${e.error}`, true);
+            };
+
+            recognition.onresult = (event) => {
+                // FIXED: Direct array-matrix extraction targeting mobile data outputs
+                if (event.results && event.results[0] && event.results[0][0]) {
+                    const text = event.results[0][0].transcript.trim();
+                    debugLog(`Heard text string: "${text}"`);
+                    addMessage("🗣️ You: " + text, 'input-msg');
+                    findMatch(text);
+                }
+            };
+
+            recognition.onend = () => {
+                isListening = false;
+                micBtn.classList.remove('listening');
                 statusText.innerText = "✅ Ready. Tap Mic.";
-                statusText.style.color = "#4b5563";
-            }
-        };
-        
-        return true;
+                debugLog("Mic closed naturally.");
+            };
+
+            statusText.innerText = "✅ Ready. Tap Mic.";
+            debugLog(`Engine created successfully for: ${currentNativeMode}`);
+        } catch (err) {
+            debugLog(`Engine Setup Failed: ${err.message}`, true);
+        }
     }
 
-    function changeLanguageMode(langCode) {
+    function changeMode(langCode) {
+        debugLog(`Switching button clicked: ${langCode}`);
         currentNativeMode = langCode;
-        btnBn.classList.toggle('active', langCode === 'bn-IN');
-        btnHi.classList.toggle('active', langCode === 'hi-IN');
-        statusText.innerText = langCode === 'bn-IN' ? "Mode: Bengali Native" : "Mode: Hindi Native";
-        statusText.style.color = "#4b5563";
+        document.getElementById('btnBn').classList.toggle('active', langCode === 'bn-IN');
+        document.getElementById('btnHi').classList.toggle('active', langCode === 'hi-IN');
         
         if (isListening && recognition) {
             recognition.stop();
         }
-        setupSpeechEngine();
+        startEngine();
     }
 
-    function toggleListening() {
-        // Fallback: If engine didn't build at startup, force build it now
+    function handleMicClick() {
+        debugLog("Mic button tapped.");
         if (!recognition) {
-            const operational = setupSpeechEngine();
-            if (!operational) return;
+            startEngine();
         }
+        if (!recognition) return;
 
         if (isListening) {
             recognition.stop();
         } else {
-            try { 
-                recognition.start(); 
-            } catch(e) { 
-                recognition.stop(); 
-                setTimeout(() => { recognition.start(); }, 200);
+            try {
+                recognition.start();
+            } catch (e) {
+                debugLog(`Mic execution blocked: ${e.message}`, true);
             }
         }
     }
 
-    function matchKeywords(text) {
-        const lowerText = text.toLowerCase();
-        let finalReply = null;
-        let finalLang = 'en';
+    function findMatch(text) {
+        const lower = text.toLowerCase();
+        let answer = null;
+        let targetLang = 'en';
 
-        for (let item of dictionary) {
-            let matchFound = item.keywords.some(keyword => lowerText.includes(keyword));
-            if (matchFound) {
-                if (typeof item.reply === 'object') {
-                    finalLang = currentNativeMode === 'bn-IN' ? 'bn' : 'hi';
-                    finalReply = item.reply[finalLang];
+        for (let entry of dictionary) {
+            let matched = entry.keywords.some(k => lower.includes(k));
+            if (matched) {
+                if (typeof entry.reply === 'object') {
+                    targetLang = currentNativeMode === 'bn-IN' ? 'bn' : 'hi';
+                    answer = entry.reply[targetLang];
                 } else {
-                    finalReply = item.reply;
-                    finalLang = item.lang;
+                    answer = entry.reply;
+                    targetLang = entry.lang;
                 }
                 break;
             }
         }
 
-        if (finalReply) {
-            let label = '🇬🇧 English: ';
-            if (finalLang === 'bn') label = '🇧🇩 Bengali: ';
-            if (finalLang === 'hi') label = '🇮🇳 Hindi: ';
-
-            addMessage(label + finalReply, 'reply-msg');
-            statusText.innerText = "🔊 Speaking...";
-            statusText.style.color = "#059669";
-            speakTextLocally(finalReply, finalLang);
+        if (answer) {
+            let flag = targetLang === 'en' ? '🇬🇧 English: ' : (targetLang === 'bn' ? '🇧🇩 Bengali: ' : '🇮🇳 Hindi: ');
+            addMessage(flag + answer, 'reply-msg');
+            
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const u = new SpeechSynthesisUtterance(answer);
+                u.lang = targetLang === 'bn' ? 'bn-IN' : (targetLang === 'hi' ? 'hi-IN' : 'en-US');
+                window.speechSynthesis.speak(u);
+            }
         } else {
-            addMessage("⚠️ Phrase not matched. Try saying 'নাম', 'नमस्ते', 'hello', or 'কেমন আছো'.", 'input-msg');
-            statusText.innerText = "✅ Ready. Tap Mic.";
+            addMessage("⚠️ Phrase match missing offline.", 'input-msg');
         }
     }
 
-    function speakTextLocally(text, targetLang) {
+    function addMessage(text, className) {
+        const m = document.createElement('div');
+        m.className = `msg ${className}`;
+        m.innerText = text;
+        chatBox.appendChild(m);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    // Force system auto-start immediately upon download completion
+    window.onload = () => {
+        startEngine();
+    };
+</script>
+
+</body>
+</html>
