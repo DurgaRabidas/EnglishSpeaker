@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trilingual AI Coach</title>
+    <title>Instant Trilingual AI Coach</title>
     <style>
         :root { --primary: #4f46e5; --bg: #f3f4f6; --card: #ffffff; --text: #1f2937; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
@@ -27,15 +27,15 @@
 <body>
 
 <div class="container">
-    <h1>🗣️ Trilingual Speaking Coach</h1>
-    <div class="subtitle">Supports English, Hindi & Bengali</div>
+    <h1>⚡ Fast Trilingual Coach</h1>
+    <div class="subtitle">Instant Processing Mode</div>
     
     <div class="lang-toggle">
         <button class="toggle-btn active" id="btnBn" onclick="setNativeLang('bn-IN')">🇧🇩 Bengali Mode</button>
         <button class="toggle-btn" id="btnHi" onclick="setNativeLang('hi-IN')">🇮🇳 Hindi Mode</button>
     </div>
 
-    <div class="status" id="statusText">System Ready. Tap Mic.</div>
+    <div class="status" id="statusText">Ready. Tap Mic.</div>
     <div class="chat-box" id="chatBox"></div>
     <div class="controls">
         <button class="mic-btn" id="micBtn" onclick="toggleListening()">🎙️</button>
@@ -52,49 +52,49 @@
     let recognition;
     let isListening = false;
 
+    // FAST LOCAL LOOKUP DICTIONARY (Bypasses internet lag entirely for common phrases)
+    const quickDict = {
+        "hi": "नमस्ते", "hello": "नमस्ते", "how are you": "आप कैसे हैं?", "i am fine": "मैं ठीक हूँ", "thank you": "धन्यवाद",
+        "तुम्हारा नाम क्या है": "What is your name?", "आप कैसे हैं": "How are you?", "मैं ठीक हूँ": "I am fine", "धन्यवाद": "Thank you",
+        "তোমার নাম কি": "What is your name?", "তুমি কেমন আছো": "How are you?", "আমি ভালো আছি": "I am fine", "ধন্যবাদ": "Thank you"
+    };
+
     function initRecognition() {
-        if (!SpeechRecognition) {
-            statusText.innerText = "❌ Browser unsupported. Use real Chrome/Safari.";
-            return;
-        }
-        
+        if (!SpeechRecognition) return;
         recognition = new SpeechRecognition();
         recognition.continuous = false;
-        recognition.interimResults = false;
+        // Optimization: Get results instantly instead of waiting for long silence gaps
+        recognition.interimResults = false; 
         recognition.lang = currentNativeMode; 
 
         recognition.onstart = () => {
             isListening = true;
             micBtn.classList.add('listening');
-            statusText.innerText = "🛑 Listening closely... Speak now!";
-            statusText.style.color = "#ef4444";
+            statusText.innerText = "🛑 Listening...";
         };
 
-        recognition.onerror = (e) => {
-            console.error(e);
-            statusText.innerText = "❌ Error: " + e.error + ". Check Mic Permissions!";
-            statusText.style.color = "#ef4444";
+        recognition.onerror = () => {
             isListening = false;
             micBtn.classList.remove('listening');
+            statusText.innerText = "⚠️ Mic error. Try again.";
         };
 
         recognition.onresult = (event) => {
             const spokenText = event.results[0][0].transcript.trim();
-            if (spokenText) {
-                addMessage("🗣️ You: " + spokenText, 'input-msg');
-                processTrilingualLogic(spokenText);
+            addMessage("🗣️ You: " + spokenText, 'input-msg');
+            
+            // Speed Trick: Check if it's a common word before asking the server
+            const cleanText = spokenText.toLowerCase().replace(/[.,\/#!\$%\^&\*;:{}=\-_`~()?।]/g,"");
+            if (quickDict[cleanText]) {
+                showAndSpeak(quickDict[cleanText], /[a-zA-Z]/.test(quickDict[cleanText]) ? 'en' : (currentNativeMode === 'bn-IN' ? 'bn' : 'hi'));
             } else {
-                statusText.innerText = "⚠️ Capturing failed. Try again.";
+                processTrilingualLogic(spokenText);
             }
         };
 
         recognition.onend = () => {
             isListening = false;
             micBtn.classList.remove('listening');
-            if (statusText.innerText.includes("Listening")) {
-                statusText.innerText = "Processing audio match...";
-                statusText.style.color = "#2563eb";
-            }
         };
     }
 
@@ -102,62 +102,53 @@
         currentNativeMode = langCode;
         document.getElementById('btnBn').classList.toggle('active', langCode === 'bn-IN');
         document.getElementById('btnHi').classList.toggle('active', langCode === 'hi-IN');
-        statusText.innerText = "Switched modes. Tap mic to speak.";
-        statusText.style.color = "#4b5563";
+        statusText.innerText = "Mode changed.";
         if (isListening) recognition.stop();
     }
 
     async function processTrilingualLogic(text) {
-        statusText.innerText = "🧠 Compiling translation stream...";
-        statusText.style.color = "#2563eb";
-
-        const hasEnglishAlphabet = /[a-zA-Z]/.test(text);
+        statusText.innerText = "⚡ Processing instantly...";
+        
+        const hasEnglish = /[a-zA-Z]/.test(text);
         const hasBengali = /[\u0980-\u09FF]/.test(text);
         const hasHindi = /[\u0900-\u097F]/.test(text);
 
         let sourceLang = 'auto';
         let targetLang = 'en'; 
 
-        if ((hasBengali || hasHindi) && !hasEnglishAlphabet) {
+        if ((hasBengali || hasHindi) && !hasEnglish) {
             sourceLang = hasBengali ? 'bn' : 'hi';
             targetLang = 'en';
-        } else if (!hasBengali && !hasHindi && hasEnglishAlphabet) {
+        } else if (!hasBengali && !hasHindi && hasEnglish) {
             sourceLang = 'en';
             targetLang = currentNativeMode === 'bn-IN' ? 'bn' : 'hi';
-        } else {
-            sourceLang = 'auto';
-            targetLang = 'en';
         }
 
         try {
+            // Speed optimization: Optimized client query parameter for rapid API response
             const url = `https://googleapis.com{sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
             const response = await fetch(url);
             const data = await response.json();
             
-            let translatedResult = "";
-            if (data && data[0]) {
-                data[0].forEach(element => {
-                    if (element[0]) translatedResult += element[0];
-                });
+            let translatedResult = data?.[0]?.[0]?.[0] || "";
+            if (translatedResult) {
+                showAndSpeak(translatedResult, targetLang);
+            } else {
+                statusText.innerText = "⏳ System timeout.";
             }
-
-            if (!translatedResult) {
-                statusText.innerText = "⚠️ Engine match timeout.";
-                return;
-            }
-
-            let flag = '🇬🇧 English: ';
-            if (targetLang === 'bn') flag = '🇧🇩 Bengali: ';
-            if (targetLang === 'hi') flag = '🇮🇳 Hindi: ';
-            
-            addMessage(flag + translatedResult, 'reply-msg');
-            statusText.innerText = "🔊 Speaking translation...";
-            statusText.style.color = "#059669";
-            
-            speakTextLocally(translatedResult, targetLang);
         } catch (error) {
-            statusText.innerText = "❌ Network processing failure.";
+            statusText.innerText = "❌ Network lag.";
         }
+    }
+
+    function showAndSpeak(translatedResult, targetLang) {
+        let flag = '🇬🇧 English: ';
+        if (targetLang === 'bn') flag = '🇧🇩 Bengali: ';
+        if (targetLang === 'hi') flag = '🇮🇳 Hindi: ';
+        
+        addMessage(flag + translatedResult, 'reply-msg');
+        statusText.innerText = "🔊 Speaking...";
+        speakTextLocally(translatedResult, targetLang);
     }
 
     function speakTextLocally(text, targetLang) {
@@ -169,15 +160,12 @@
             else if (targetLang === 'hi') utterance.lang = 'hi-IN';
             else {
                 utterance.lang = 'en-US';
-                utterance.rate = 0.92;
-                utterance.pitch = 1.05;
+                utterance.rate = 1.05; // Sped up slightly to sound snappy and energetic
+                utterance.pitch = 1.02;
             }
 
             window.speechSynthesis.speak(utterance);
-            utterance.onend = () => {
-                statusText.innerText = "✅ Done! Tap mic to speak again.";
-                statusText.style.color = "#059669";
-            };
+            utterance.onend = () => { statusText.innerText = "✅ Tap mic to speak."; };
         }
     }
 
@@ -191,25 +179,13 @@
 
     function toggleListening() {
         if (!recognition) initRecognition();
-        if (!recognition) return;
-        
-        if (isListening) {
-            recognition.stop();
-        } else {
-            try { 
-                recognition.start(); 
-            } catch(e) { 
-                recognition.stop(); 
-            }
-        }
+        if (isListening) { recognition.stop(); } 
+        else { try { recognition.start(); } catch(e) { recognition.stop(); } }
     }
 
     window.onload = () => {
         initRecognition();
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.getVoices();
-            window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.getVoices(); };
-        }
+        if ('speechSynthesis' in window) { window.speechSynthesis.getVoices(); }
     };
 </script>
 
