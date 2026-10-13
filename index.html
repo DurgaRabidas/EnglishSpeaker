@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Instant Trilingual AI Coach</title>
+    <title>Instant Offline Trilingual Coach</title>
     <style>
         :root { --primary: #4f46e5; --bg: #f3f4f6; --card: #ffffff; --text: #1f2937; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
@@ -27,8 +27,8 @@
 <body>
 
 <div class="container">
-    <h1>⚡ Fast Trilingual Coach</h1>
-    <div class="subtitle">Instant Processing Mode</div>
+    <h1>⚡ Offline Dictionary Coach</h1>
+    <div class="subtitle">0-Lag Instant Local Translation</div>
     
     <div class="lang-toggle">
         <button class="toggle-btn active" id="btnBn" onclick="setNativeLang('bn-IN')">🇧🇩 Bengali Mode</button>
@@ -52,18 +52,59 @@
     let recognition;
     let isListening = false;
 
-    // FAST LOCAL LOOKUP DICTIONARY (Bypasses internet lag entirely for common phrases)
-    const quickDict = {
-        "hi": "नमस्ते", "hello": "नमस्ते", "how are you": "आप कैसे हैं?", "i am fine": "मैं ठीक हूँ", "thank you": "धन्यवाद",
-        "तुम्हारा नाम क्या है": "What is your name?", "आप कैसे हैं": "How are you?", "मैं ठीक हूँ": "I am fine", "धन्यवाद": "Thank you",
-        "তোমার নাম কি": "What is your name?", "তুমি কেমন আছো": "How are you?", "আমি ভালো আছি": "I am fine", "ধন্যবাদ": "Thank you"
+    // MASSIVE LOCAL DICTIONARY (Completely Offline - Incredibly Fast)
+    const masterDictionary = {
+        // --- HINDI TO ENGLISH ---
+        "नमस्ते": "Hello",
+        "आप कैसे हैं": "How are you",
+        "मैं ठीक हूँ": "I am fine",
+        "आपका नाम क्या है": "What is your name",
+        "मेरा नाम है": "My name is",
+        "धन्यवाद": "Thank you",
+        "तुम कहाँ जा रहे हो": "Where are you going",
+        "मुझे भूख लगी है": "I am hungry",
+        "मुझे अंग्रेजी सीखनी है": "I want to learn English",
+        "यह कितने का है": "How much is this",
+        "अलविदा": "Goodbye",
+        "हाँ": "Yes",
+        "नहीं": "No",
+        "शुभ प्रभात": "Good morning",
+        "शुभ रात्रि": "Good night",
+        "क्या आप मेरी मदद कर सकते हैं": "Can you help me",
+        "मुझे समझ नहीं आया": "I did not understand",
+
+        // --- BENGALI TO ENGLISH ---
+        "নমস্কার": "Hello",
+        "তুমি কেমন আছো": "How are you",
+        "আমি ভালো আছি": "I am fine",
+        "তোমার নাম কি": "What is your name",
+        "আমার নাম": "My name is",
+        "ধন্যবাদ": "Thank you",
+        "তুমি কোথায় যাচ্ছো": "Where are you going",
+        "আমার খিদে পেয়েছে": "I am hungry",
+        "আমি ইংরেজি শিখতে চাই": "I want to learn English",
+        "এটার দাম কত": "How much is this",
+        "বিদায়": "Goodbye",
+        "হ্যাঁ": "Yes",
+        "না": "No",
+        "সুপ্রভাত": "Good morning",
+        "শুভ রাত্রি": "Good night",
+        "তুমি কি আমাকে সাহায্য করতে পারবে": "Can you help me",
+        "আমি বুঝতে পারিনি": "I did not understand",
+
+        // --- ENGLISH TO NATIVE REVERSALS ---
+        "hello": { hi: "नमस्ते", bn: "নমস্কার" },
+        "how are you": { hi: "आप कैसे हैं?", bn: "তুমি কেমন আছো?" },
+        "i am fine": { hi: "मैं ठीक हूँ", bn: "আমি ভালো আছি" },
+        "what is your name": { hi: "आपका नाम क्या है?", bn: "তোমার নাম কি?" },
+        "thank you": { hi: "धन्यवाद", bn: "ধন্যবাদ" },
+        "goodbye": { hi: "अलविदा", bn: "বিদায়" }
     };
 
     function initRecognition() {
         if (!SpeechRecognition) return;
         recognition = new SpeechRecognition();
         recognition.continuous = false;
-        // Optimization: Get results instantly instead of waiting for long silence gaps
         recognition.interimResults = false; 
         recognition.lang = currentNativeMode; 
 
@@ -80,16 +121,10 @@
         };
 
         recognition.onresult = (event) => {
-            const spokenText = event.results[0][0].transcript.trim();
+            const spokenText = event.results.transcript.trim();
             addMessage("🗣️ You: " + spokenText, 'input-msg');
             
-            // Speed Trick: Check if it's a common word before asking the server
-            const cleanText = spokenText.toLowerCase().replace(/[.,\/#!\$%\^&\*;:{}=\-_`~()?।]/g,"");
-            if (quickDict[cleanText]) {
-                showAndSpeak(quickDict[cleanText], /[a-zA-Z]/.test(quickDict[cleanText]) ? 'en' : (currentNativeMode === 'bn-IN' ? 'bn' : 'hi'));
-            } else {
-                processTrilingualLogic(spokenText);
-            }
+            processInstantOfflineLogic(spokenText);
         };
 
         recognition.onend = () => {
@@ -106,49 +141,50 @@
         if (isListening) recognition.stop();
     }
 
-    async function processTrilingualLogic(text) {
-        statusText.innerText = "⚡ Processing instantly...";
+    function processInstantOfflineLogic(text) {
+        statusText.innerText = "⚡ Matching instantly...";
         
-        const hasEnglish = /[a-zA-Z]/.test(text);
-        const hasBengali = /[\u0980-\u09FF]/.test(text);
-        const hasHindi = /[\u0900-\u097F]/.test(text);
+        const cleanText = text.toLowerCase().replace(/[.,\/#!\$%\^&\*;:{}=\-_`~()?।]/g,"").trim();
+        const isEnglishInput = /[a-zA-Z]/.test(cleanText);
+        
+        let match = null;
+        let targetLang = 'en';
 
-        let sourceLang = 'auto';
-        let targetLang = 'en'; 
-
-        if ((hasBengali || hasHindi) && !hasEnglish) {
-            sourceLang = hasBengali ? 'bn' : 'hi';
-            targetLang = 'en';
-        } else if (!hasBengali && !hasHindi && hasEnglish) {
-            sourceLang = 'en';
-            targetLang = currentNativeMode === 'bn-IN' ? 'bn' : 'hi';
-        }
-
-        try {
-            // Speed optimization: Optimized client query parameter for rapid API response
-            const url = `https://googleapis.com{sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
-            const response = await fetch(url);
-            const data = await response.json();
-            
-            let translatedResult = data?.[0]?.[0]?.[0] || "";
-            if (translatedResult) {
-                showAndSpeak(translatedResult, targetLang);
-            } else {
-                statusText.innerText = "⏳ System timeout.";
+        if (isEnglishInput) {
+            // If user speaks English, look it up and find the Hindi or Bengali match
+            const dictItem = masterDictionary[cleanText];
+            if (dictItem) {
+                targetLang = currentNativeMode === 'bn-IN' ? 'bn' : 'hi';
+                match = dictItem[targetLang];
             }
-        } catch (error) {
-            statusText.innerText = "❌ Network lag.";
+        } else {
+            // If user speaks Hindi/Bengali, look it up directly to get the English translation
+            // Try perfect check first
+            if (masterDictionary[cleanText]) {
+                match = masterDictionary[cleanText];
+            } else {
+                // Smart partial check (if you say extra words, it still finds the base phrase)
+                for (let key in masterDictionary) {
+                    if (cleanText.includes(key) || key.includes(cleanText)) {
+                        match = masterDictionary[key];
+                        break;
+                    }
+                }
+            }
         }
-    }
 
-    function showAndSpeak(translatedResult, targetLang) {
-        let flag = '🇬🇧 English: ';
-        if (targetLang === 'bn') flag = '🇧🇩 Bengali: ';
-        if (targetLang === 'hi') flag = '🇮🇳 Hindi: ';
-        
-        addMessage(flag + translatedResult, 'reply-msg');
-        statusText.innerText = "🔊 Speaking...";
-        speakTextLocally(translatedResult, targetLang);
+        if (match) {
+            let flag = '🇬🇧 English: ';
+            if (targetLang === 'bn') flag = '🇧🇩 Bengali: ';
+            if (targetLang === 'hi') flag = '🇮🇳 Hindi: ';
+            
+            addMessage(flag + match, 'reply-msg');
+            statusText.innerText = "🔊 Speaking...";
+            speakTextLocally(match, targetLang);
+        } else {
+            addMessage("⚠️ Phrase not found in offline dictionary pack. Try common sentences!", 'input-msg');
+            statusText.innerText = "Tap mic to try again.";
+        }
     }
 
     function speakTextLocally(text, targetLang) {
@@ -160,8 +196,7 @@
             else if (targetLang === 'hi') utterance.lang = 'hi-IN';
             else {
                 utterance.lang = 'en-US';
-                utterance.rate = 1.05; // Sped up slightly to sound snappy and energetic
-                utterance.pitch = 1.02;
+                utterance.rate = 1.05; // Quick and snappy response speed
             }
 
             window.speechSynthesis.speak(utterance);
@@ -185,9 +220,3 @@
 
     window.onload = () => {
         initRecognition();
-        if ('speechSynthesis' in window) { window.speechSynthesis.getVoices(); }
-    };
-</script>
-
-</body>
-</html>
