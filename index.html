@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Hybrid Smart Speaking Coach</title>
+    <title>Instant Smart Speaking Coach</title>
     <style>
         :root { --primary: #4f46e5; --bg: #f3f4f6; --card: #ffffff; --text: #1f2937; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; display: flex; flex-direction: column; align-items: center; }
@@ -20,23 +20,22 @@
         .reply-msg { background: var(--primary); color: #fff; align-self: flex-end; font-weight: bold; }
         .controls { display: flex; justify-content: center; }
         .mic-btn { background: var(--primary); border: none; width: 75px; height: 75px; border-radius: 50%; color: white; font-size: 2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3); -webkit-tap-highlight-color: transparent; }
-        .mic-btn.listening { background: #ef4444; animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.03); } 100% { transform: scale(1); } }
-        .debug-panel { width: 100%; max-width: 500px; background: #1e293b; color: #38bdf8; font-family: monospace; font-size: 0.75rem; padding: 10px; border-radius: 8px; margin-top: 15px; box-sizing: border-box; max-height: 100px; overflow-y: auto; word-break: break-all; }
+        .mic-btn.listening { background: #ef4444; }
+        .debug-panel { width: 100%; max-width: 500px; background: #1e293b; color: #38bdf8; font-family: monospace; font-size: 0.75rem; padding: 10px; border-radius: 8px; margin-top: 15px; box-sizing: border-box; max-height: 100px; overflow-y: auto; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h1>🗣️ Smart AI Speaking Coach</h1>
-    <div class="subtitle">Fast Local Matching + Global Network Search</div>
+    <div class="subtitle">Instant Local Processing + Network Core</div>
     
     <div class="lang-toggle">
         <button class="toggle-btn active" id="btnBn">🇧🇩 Bengali</button>
         <button class="toggle-btn" id="btnHi">🇮🇳 Hindi</button>
     </div>
 
-    <div class="status" id="statusText">Initializing Speech Engine...</div>
+    <div class="status" id="statusText">Initializing Voice Engine...</div>
     <div class="chat-box" id="chatBox"></div>
     <div class="controls">
         <button class="mic-btn" id="micBtn">🎙️</button>
@@ -63,11 +62,13 @@
         logBox.scrollTop = logBox.scrollHeight;
     }
 
+    // Capture crashes instantly
     window.onerror = function(message, source, lineno, colno, error) {
-        debugLog(`CRASH CAUGHT: ${message} (Line ${lineno})`, true);
+        debugLog(`CRASH: ${message} (Line ${lineno})`, true);
         return false;
     };
 
+    // Fast-loading local database dictionary strings
     const localDictionary = [
         { keywords: ["নমস্কার", "হ্যালো"], reply: "Hello!", lang: "en" },
         { keywords: ["কেমন আছো", "কেমন আছেন"], reply: "How are you?", lang: "en" },
@@ -88,7 +89,7 @@
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!SpeechRecognition) {
                 statusText.innerText = "❌ Browser unsupported.";
-                debugLog("SpeechRecognition framework missing. Switch to Chrome or Safari.", true);
+                debugLog("SpeechRecognition missing. Use Google Chrome or Safari App.", true);
                 return false;
             }
             
@@ -102,20 +103,20 @@
                 micBtn.classList.add('listening');
                 statusText.innerText = "🛑 Listening... Speak now!";
                 statusText.style.color = "#ef4444";
-                debugLog(`Mic active channel. Target: ${recognition.lang}`);
+                debugLog(`Mic active channel: ${recognition.lang}`);
             };
 
             recognition.onerror = (e) => {
                 isListening = false;
                 micBtn.classList.remove('listening');
-                statusText.innerText = "❌ Recording Error.";
-                debugLog(`Mic pipeline triggered warning: ${e.error}`, true);
+                statusText.innerText = "❌ Mic Error.";
+                debugLog(`Mic pipeline issue: ${e.error}`, true);
             };
 
             recognition.onresult = (event) => {
                 if (event.results && event.results[0] && event.results[0][0]) {
                     const text = event.results[0][0].transcript.trim();
-                    debugLog(`Recognized string voice match: "${text}"`);
+                    debugLog(`Heard voice input: "${text}"`);
                     addMessage("🗣️ You: " + text, 'input-msg');
                     processHybridLogic(text);
                 }
@@ -124,8 +125,8 @@
             recognition.onend = () => {
                 isListening = false;
                 micBtn.classList.remove('listening');
-                if (!statusText.innerText.includes("Speaking") && !statusText.innerText.includes("Cloud")) {
-                    statusText.innerText = "网页 Ready. Tap Mic.";
+                if (!statusText.innerText.includes("Speaking") && !statusText.innerText.includes("Fetching")) {
+                    statusText.innerText = "✅ Ready. Tap Mic.";
                     statusText.style.color = "#4b5563";
                 }
             };
@@ -133,13 +134,13 @@
             statusText.innerText = "✅ Ready. Tap Mic.";
             return true;
         } catch(err) {
-            debugLog(`Engine initialization failed: ${err.message}`, true);
+            debugLog(`Engine failure: ${err.message}`, true);
             return false;
         }
     }
 
     function changeMode(langCode) {
-        debugLog(`Lang toggle target request triggered: ${langCode}`);
+        debugLog(`Switching language mode: ${langCode}`);
         currentNativeMode = langCode;
         btnBn.classList.toggle('active', langCode === 'bn-IN');
         btnHi.classList.toggle('active', langCode === 'hi-IN');
@@ -152,7 +153,6 @@
     }
 
     function handleMicClick() {
-        debugLog("User gesture click registered.");
         if (!recognition) setupSpeechEngine();
         if (!recognition) return;
 
@@ -162,7 +162,7 @@
             try { 
                 recognition.start(); 
             } catch (e) { 
-                debugLog(`Execution pipeline block context reset: ${e.message}`, true);
+                debugLog(`Resetting active audio loops...`);
                 recognition.stop();
             }
         }
@@ -173,7 +173,7 @@
         let answer = null;
         let targetLang = 'en';
 
-        debugLog("Checking local database profiles...");
+        // Stage 1: Fast local match
         for (let entry of localDictionary) {
             let matched = entry.keywords.some(k => lower.includes(k));
             if (matched) {
@@ -184,18 +184,24 @@
                     answer = entry.reply;
                     targetLang = entry.lang;
                 }
-                debugLog("🎯 High-speed local match verified.");
+                debugLog("🎯 Fast local match verified.");
                 break;
             }
         }
 
+        // Stage 2: Safe open API bypass network
         if (!answer) {
-            debugLog("Missing local phrase match. Shifting to cloud API network...");
-            statusText.innerText = "⏳ Cloud query loading...";
+            debugLog("Routing query through MyMemory API network...");
+            statusText.innerText = "⏳ Fetching translation...";
             
             const hasEnglish = /[a-zA-Z]/.test(text);
             const hasBengali = /[\u0980-\u09FF]/.test(text);
-            const hasHindi = /[\u0900-\u097F]/.test(text);
 
-            let sourceLang = 'auto';
-            if (hasBengali) sourceLang = 'bn';
+            let sl = 'hi';
+            if (hasBengali) sl = 'bn';
+            else if (hasEnglish) sl = 'en';
+
+            targetLang = (sl === 'en') ? (currentNativeMode === 'bn-IN' ? 'bn' : 'hi') : 'en';
+
+            try {
+                // Tapping MyMemory translation core which allows global CORS fetch requests safely
