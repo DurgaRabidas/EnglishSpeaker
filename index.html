@@ -24,7 +24,6 @@
     
     .mode-container { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 30px; background: #f1f5f9; padding: 8px 16px; border-radius: 30px; }
     select { border: none; background: transparent; font-size: 1rem; font-weight: 600; color: var(--text); cursor: pointer; outline: none; }
-    .arrow-icon { font-size: 1.2rem; color: var(--primary); }
 
     .mic-btn { width: 90px; height: 90px; border-radius: 50%; border: none; background: var(--primary); color: white; font-size: 2rem; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 8px 16px rgba(79, 70, 229, 0.3); display: inline-flex; align-items: center; justify-content: center; outline: none; }
     .mic-btn:hover { background: var(--primary-hover); transform: scale(1.05); }
@@ -138,7 +137,7 @@
       };
 
       recognition.onresult = async (event) => {
-        const spokenText = event.results[0][0].transcript;
+        const spokenText = event.results.transcript;
         inputText.textContent = spokenText;
         
         statusText.textContent = "Translating text...";
@@ -160,10 +159,10 @@
       statusText.textContent = "Tap the mic to talk";
     }
 
-    // Call the free translation network engine
+    // Call the free translation network engine with registered email account identifier
     async function translateText(text, source, target) {
       try {
-        const url = `https://translated.net{encodeURIComponent(text)}&langpair=${source}|${target}`;
+        const url = `https://translated.net{encodeURIComponent(text)}&langpair=${source}|${target}&de=durgarabidas2@gmail.com`;
         const response = await fetch(url);
         const data = await response.json();
         if(data.responseData) {
