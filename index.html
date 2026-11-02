@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BhashaSpeak - Two-Way Voice Translator</title>
+  <title>BhashaSpeak - Pure Offline Voice Translator</title>
   <style>
     :root {
       --primary: #4f46e5;
@@ -28,7 +28,9 @@
     .mic-btn { width: 90px; height: 90px; border-radius: 50%; border: none; background: var(--primary); color: white; font-size: 2rem; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 8px 16px rgba(79, 70, 229, 0.3); display: inline-flex; align-items: center; justify-content: center; outline: none; }
     .mic-btn:hover { background: var(--primary-hover); transform: scale(1.05); }
     .mic-btn.listening { background: var(--listening); animation: pulse 1.5s infinite; box-shadow: 0 8px 16px rgba(239, 68, 68, 0.4); }
-    .status-text { margin-top: 12px; font-size: 0.9rem; font-weight: 600; color: var(--text-light); height: 20px; }
+    .mic-btn:disabled { background: #cbd5e1; cursor: not-allowed; box-shadow: none; }
+    
+    .status-text { margin-top: 12px; font-size: 0.9rem; font-weight: 600; color: var(--text-light); min-height: 20px; }
 
     .display-box { margin-top: 30px; text-align: left; background: #f8fafc; border-radius: 12px; padding: 16px; border: 1px solid #e2e8f0; }
     .log-group { margin-bottom: 16px; }
@@ -47,7 +49,7 @@
 
   <div class="translator-card">
     <h1>BhashaSpeak</h1>
-    <p class="subtitle">Two-Way Live Voice Translator</p>
+    <p class="subtitle">100% Offline Voice Translator</p>
     
     <div class="mode-container">
       <select id="direction">
@@ -56,8 +58,8 @@
       </select>
     </div>
 
-    <button id="micBtn" class="mic-btn">🎤</button>
-    <div id="statusText" class="status-text">Tap the mic to talk</div>
+    <button id="micBtn" class="mic-btn" disabled>⏳</button>
+    <div id="statusText" class="status-text">Loading translation engine AI (First time setup)...</div>
 
     <div class="display-box">
       <div class="log-group">
@@ -72,7 +74,10 @@
     </div>
   </div>
 
-  <script>
+  <!-- Import Transformers.js for on-device browser translation -->
+  <script type="module">
+    import { pipeline } from 'https://jsdelivr.net';
+
     const micBtn = document.getElementById('micBtn');
     const statusText = document.getElementById('statusText');
     const inputText = document.getElementById('inputText');
@@ -83,8 +88,28 @@
 
     let isListening = false;
     let recognition;
+    let translator = null;
 
-    // Check browser compatibility
+    // Initialize the offline AI model (Xenova/XLM-RoBERTa based translation or Xenova/nllb-200-distilled-600M)
+    // We use a small optimized translation model for browsers
+    async function initAI() {
+      try {
+        statusText.textContent = "Downloading AI Model (~40MB)... Please wait.";
+        // Initialize Xenova's translation pipeline targeting Hindi/English tasks
+        translator = await pipeline('translation', 'Xenova/m2m100_418M'); 
+        
+        statusText.textContent = "Ready! Tap the mic to talk.";
+        micBtn.innerHTML = "🎤";
+        micBtn.disabled = false;
+      } catch (e) {
+        console.error(e);
+        statusText.textContent = "AI engine failed to load. Check internet for first setup.";
+      }
+    }
+
+    // Start setup
+    initAI();
+
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       statusText.textContent = "Error: Browser speech recognition not supported.";
@@ -94,7 +119,6 @@
       recognition.continuous = false;
       recognition.interimResults = false;
 
-      // Handle UI text switches when changing language mode
       directionSelect.addEventListener('change', () => {
         if(directionSelect.value === 'hi-to-en') {
           inputLabel.textContent = "You Spoke (Hindi)";
@@ -112,7 +136,7 @@
           recognition.lang = mode === 'hi-to-en' ? 'hi-IN' : 'en-US';
           try {
             recognition.start();
-          } catch(e) { console.log("Already active"); }
+          } catch(e) {}
         } else {
           recognition.stop();
         }
@@ -127,29 +151,37 @@
       recognition.onend = () => {
         isListening = false;
         micBtn.classList.remove('listening');
-        statusText.textContent = "Processing speech...";
       };
 
       recognition.onerror = (event) => {
         isListening = false;
         micBtn.classList.remove('listening');
-        statusText.textContent = `Error encountered: ${event.error}`;
+        statusText.textContent = `Speech error: ${event.error}`;
       };
 
       recognition.onresult = async (event) => {
         const spokenText = event.results.transcript;
         inputText.textContent = spokenText;
         
-        statusText.textContent = "Translating text...";
+        statusText.textContent = "AI is translating locally...";
         const mode = directionSelect.value;
-        const sourceLang = mode === 'hi-to-en' ? 'hi' : 'en';
-        const targetLang = mode === 'hi-to-en' ? 'en' : 'hi';
+        
+        // Define exact language keys for the M2M100 Model
+        const srcLang = mode === 'hi-to-en' ? 'hi' : 'en';
+        const tgtLang = mode === 'hi-to-en' ? 'en' : 'hi';
 
-        const translatedText = await translateText(spokenText, sourceLang, targetLang);
-        outputText.textContent = translatedText;
+        if (translator) {
+          const output = await translator(spokenText, {
+            src_lang: srcLang,
+            tgt_lang: tgtLang,
+          });
+          
+          const translatedText = output[0].translation_text;
+          outputText.textContent = translatedText;
 
-        statusText.textContent = "Speaking out translation...";
-        speakText(translatedText, targetLang);
+          statusText.textContent = "Speaking translation...";
+          speakText(translatedText, tgtLang);
+        }
       };
     }
 
@@ -159,25 +191,8 @@
       statusText.textContent = "Tap the mic to talk";
     }
 
-    // Call the free translation network engine with registered email account identifier
-    async function translateText(text, source, target) {
-      try {
-        const url = `https://translated.net{encodeURIComponent(text)}&langpair=${source}|${target}&de=durgarabidas2@gmail.com`;
-        const response = await fetch(url);
-        const data = await response.json();
-        if(data.responseData) {
-          return data.responseData.translatedText;
-        } else {
-          return "API limit reached. Try again later.";
-        }
-      } catch (err) {
-        return 'Network or translation issue.';
-      }
-    }
-
-    // Call browser local engine text-to-speech
     function speakText(text, langCode) {
-      window.speechSynthesis.cancel(); // Terminate existing audio queues
+      window.speechSynthesis.cancel(); 
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = langCode === 'hi' ? 'hi-IN' : 'en-US';
       
